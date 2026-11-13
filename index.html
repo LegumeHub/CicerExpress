@@ -1,0 +1,518 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>CicerExpress | Chickpea Expression Atlas</title><link rel="stylesheet" href="style.css"/><script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script><script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script></head><body>
+<header class="top-header"><div class="brand"><img src="assets/atlas_logo.png" alt="CicerExpress logo" class="logo"/><div><h1>CicerExpress</h1><p>Interactive chickpea expression atlas | CDC Frontier v2.0 | Tennessee State University | Version 1.0</p></div></div></header>
+<nav class="tabs">
+<button class="tab-btn active" data-tab="atlas">Expression Atlas</button>
+<button class="tab-btn" data-tab="bar">Bar Graph</button>
+<button class="tab-btn" data-tab="summary">Mean / Median</button>
+<button class="tab-btn" data-tab="heatmap">Heatmap</button>
+<button class="tab-btn" data-tab="gwas">GWAS Candidate Genes</button>
+<button class="tab-btn" data-tab="tfportal">TF Portal</button>
+<button class="tab-btn" data-tab="go">Gene Ontology</button>
+<button class="tab-btn" data-tab="domains">Functional Annotation</button>
+<button class="tab-btn" data-tab="mapper">Chromosome Mapper</button>
+<button class="tab-btn" data-tab="downloads">Downloads</button>
+<button class="tab-btn" data-tab="about">About</button>
+</nav>
+<div class="assembly-banner">All gene IDs and coordinates refer to the <strong>CDC Frontier v2.0</strong> reference genome and annotation (<a href="https://data.legumeinfo.org/Cicer/arietinum/annotations/CDCFrontier.gnm2.ann1.9M1L/" target="_blank">cicar.CDCFrontier.gnm2.ann1.9M1L</a>, Legume Information System). Query with gene IDs such as <code>Ca_00001</code> and chromosomes Ca01&ndash;Ca08 (1&ndash;8 and Chr1&ndash;Chr8 are also accepted). Expression values are median TPM across biological replicates.</div>
+<main class="container"><!-- Atlas tab -->
+    <section id="atlas" class="tab-content active">
+      <div class="layout">
+        <aside class="sidebar">
+          <h2>Gene search</h2>
+
+          <label>Type gene ID</label>
+          <input id="geneInput" list="geneList" placeholder="Example: Ca_07355" />
+          <datalist id="geneList"></datalist>
+
+          <button id="loadGeneBtn" class="primary-btn">Load gene</button>
+          <div id="geneStatus" class="status"></div>
+
+          <label>Maximum TPM for atlas color scale</label>
+          <input id="maxTpm" type="range" min="1" max="500" value="100" />
+          <div class="range-label">Max TPM: <span id="maxTpmLabel">100</span></div>
+
+          <label>Color palette</label>
+          <select id="paletteSelect"></select>
+
+          <label>Atlas outline/stroke</label>
+          <select id="strokeMode">
+            <option>No stroke</option>
+            <option>Black stroke</option>
+            <option>Gray stroke</option>
+            <option>White stroke</option>
+            <option>Custom color</option>
+          </select>
+
+          <label>Custom stroke color</label>
+          <input id="customStrokeColor" type="text" value="#333333" />
+
+          <label>Stroke width</label>
+          <input id="strokeWidth" type="range" min="0" max="5" value="1" step="0.25" />
+          <div class="range-label">Stroke width: <span id="strokeWidthLabel">1</span></div>
+
+          <hr />
+
+          <h2>Download atlas</h2>
+          <button id="downloadSvgBtn" class="download-btn">Download SVG</button>
+          <button id="downloadPngBtn" class="download-btn">Download PNG 4500 × 3250</button>
+          <button id="downloadJpegBtn" class="download-btn">Download JPEG 4500 × 3250</button>
+        </aside>
+
+        <section class="card">
+          <h2>Expression eFP View</h2>
+          <p class="note">Type a gene ID and click Load gene.</p>
+          <div id="svgContainer" class="svg-box"></div>
+        </section>
+      </div>
+    </section>
+<!-- Bar tab -->
+    <section id="bar" class="tab-content">
+      <div class="layout">
+        <aside class="sidebar">
+          <h2>Gene and tissue options</h2>
+
+          <label>Type gene ID</label>
+          <input id="barGeneInput" list="geneList" placeholder="Example: Ca_07355" />
+
+          <button id="loadBarGeneBtn" class="primary-btn">Load gene</button>
+          <div id="barGeneStatus" class="status"></div>
+
+          <label>Tissue group</label>
+          <select id="barGroup"></select>
+
+          <label class="checkbox-label">
+            <input id="barLog" type="checkbox" checked />
+            Use log2(TPM + 1)
+          </label>
+        </aside>
+
+        <section class="card">
+          <h2>Expression across selected tissues</h2>
+          <div id="barPlot" class="plot-box"></div>
+        </section>
+      </div>
+    </section>
+<!-- Summary tab -->
+    <section id="summary" class="tab-content">
+      <div class="layout">
+        <aside class="sidebar">
+          <h2>Multiple gene selection</h2>
+
+          <label>Paste gene IDs</label>
+          <textarea id="summaryGenes" rows="8" placeholder="Ca_07355&#10;Ca_07371"></textarea>
+
+          <label>Tissue group</label>
+          <select id="summaryGroup"></select>
+
+          <label class="checkbox-label">
+            <input id="summaryLog" type="checkbox" checked />
+            Use log2(TPM + 1)
+          </label>
+
+          <label class="checkbox-label">
+            <input id="summaryPoints" type="checkbox" checked />
+            Show individual genes as points
+          </label>
+
+          <button id="summaryBtn" class="primary-btn">Generate summary</button>
+          <button id="downloadSummaryPngBtn" class="download-btn">Download PNG</button>
+          <button id="downloadSummarySvgBtn" class="download-btn">Download SVG</button>
+          <button id="downloadSummaryCsvBtn" class="download-btn">Download summary table (CSV)</button>
+          <p class="note">For each tissue, the mean and median are calculated across the selected genes, using each gene's median TPM across biological replicates. Comparing the two shows whether a few highly expressed genes dominate the average.</p>
+        </aside>
+
+        <section class="card">
+          <h2>Mean and median expression across selected genes</h2>
+          <div id="summaryPlot" class="plot-box"></div>
+        </section>
+      </div>
+    </section>
+<!-- Heatmap tab -->
+    <section id="heatmap" class="tab-content">
+      <div class="layout">
+        <aside class="sidebar">
+          <h2>Heatmap options</h2>
+
+          <label>Paste gene IDs</label>
+          <textarea id="heatmapGenes" rows="10" placeholder="Ca_07355&#10;Ca_07371&#10;Ca_08859"></textarea>
+
+          <label>Tissue group</label>
+          <select id="heatmapGroup"></select>
+
+          <label>Heatmap value</label>
+          <select id="heatmapScale">
+            <option>log2(TPM + 1)</option>
+            <option>Raw TPM</option>
+            <option>Row-scaled Z-score</option>
+          </select>
+
+          <label>Color palette</label>
+          <select id="heatmapPalette"></select>
+
+          <label class="checkbox-label">
+            <input id="heatmapAutoScale" type="checkbox" checked />
+            Automatic color-scale limits
+          </label>
+          <div id="heatmapLimitBox" class="limit-grid hidden-control">
+            <div><label>Minimum</label><input id="heatmapZmin" type="number" step="any" placeholder="e.g. 0" /></div>
+            <div><label>Maximum</label><input id="heatmapZmax" type="number" step="any" placeholder="e.g. 10" /></div>
+          </div>
+          <p class="note">Set fixed limits to compare several heatmaps on the same scale. Values outside the range are shown in the end colors.</p>
+
+          <label class="checkbox-label">
+            <input id="heatmapClusterRows" type="checkbox" />
+            Cluster genes (rows)
+          </label>
+          <label class="checkbox-label">
+            <input id="heatmapClusterCols" type="checkbox" />
+            Cluster tissues (columns)
+          </label>
+
+          <button id="heatmapBtn" class="primary-btn">Generate heatmap</button>
+          <button id="downloadHeatmapPngBtn" class="download-btn">Download PNG</button>
+          <button id="downloadHeatmapSvgBtn" class="download-btn">Download SVG</button>
+          <button id="downloadHeatmapCsvBtn" class="download-btn">Download plotted matrix (CSV)</button>
+        </aside>
+
+        <section class="card">
+          <h2>Gene expression heatmap</h2>
+          <div id="heatmapPlot" class="plot-box large"></div>
+        </section>
+      </div>
+    </section>
+<!-- GWAS tab -->
+    <section id="gwas" class="tab-content">
+      <div class="layout">
+        <aside class="sidebar">
+          <h2>SNP region search</h2>
+          <p class="note">SNP positions must be on the <strong>CDC Frontier v2.0</strong> assembly. Convert coordinates from other assemblies before searching.</p>
+
+          <label>Input mode</label>
+          <select id="gwasMode">
+            <option value="single">Single SNP</option>
+            <option value="batch">Batch: list of SNPs</option>
+          </select>
+
+          <div id="gwasSingleBox">
+            <label>SNP ID optional</label>
+            <input id="snpId" placeholder="Example: Ca03_67821180" />
+
+            <label>Chromosome</label>
+            <input id="gwasChr" value="3" placeholder="Ca03, Chr3 or 3" />
+
+            <label>SNP position bp</label>
+            <input id="snpPos" type="number" value="67821180" />
+          </div>
+
+          <div id="gwasBatchBox" class="hidden-control">
+            <label>Paste SNPs (one per line)</label>
+            <textarea id="gwasBatchInput" rows="8" placeholder="SNP_ID, Chr, Position[, Upstream, Downstream]&#10;SNP_1, Ca03, 67821180&#10;SNP_2, 4, 13250000, 100000, 100000"></textarea>
+            <p class="note">Comma, tab or semicolon separated. Optional per-SNP windows override the defaults below. A header row is ignored.</p>
+            <label>Or upload a CSV/TSV/TXT file</label>
+            <input id="gwasBatchFile" type="file" accept=".csv,.tsv,.txt" />
+          </div>
+
+          <label>Upstream distance bp</label>
+          <input id="upstream" type="number" value="50000" />
+
+          <label>Downstream distance bp</label>
+          <input id="downstream" type="number" value="50000" />
+
+          <label class="checkbox-label">
+            <input id="gwasIncludeTpm" type="checkbox" />
+            Add median TPM for all 32 tissues
+          </label>
+
+          <button id="searchGwasBtn" class="primary-btn">Search candidate genes</button>
+          <button id="downloadGwasCsvBtn" class="download-btn">Download CSV</button>
+          <button id="downloadGwasXlsxBtn" class="download-btn">Download Excel (all sheets)</button>
+          <hr />
+          <h2>Send candidate genes to</h2>
+          <button id="gwasToHeatmapBtn" class="primary-btn">Heatmap</button>
+          <button id="gwasToGoBtn" class="primary-btn">GO enrichment</button>
+          <button id="gwasToDomainBtn" class="primary-btn">InterPro / Pfam enrichment</button>
+          <button id="gwasToMapperBtn" class="primary-btn">Chromosome mapper</button>
+          <p class="note">Distance_to_gene_bp is the distance from the SNP to the nearest gene boundary (0 when the SNP lies within the gene).</p>
+        </aside>
+
+        <section class="card">
+          <h2>Candidate genes within selected SNP region</h2>
+          <div id="gwasSummary" class="note"></div>
+          <div id="gwasSnpSummaryWrap" class="table-wrap hidden-control" style="max-height:260px;margin-bottom:14px;"><table id="gwasSnpSummaryTable"></table></div>
+          <div class="table-wrap">
+            <table id="gwasTable"></table>
+          </div>
+        </section>
+      </div>
+    </section>
+<!-- TF Portal tab -->
+<section id="tfportal" class="tab-content">
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>TF Search</h2>
+      <label>Search gene ID, TF family, description, expression class, or tissue</label>
+      <input id="tfSearchInput" placeholder="Example: Ca_00001, MYB, bHLH, seed" />
+      <label>TF family</label><select id="tfFamilyFilter"><option value="">All TF families</option></select>
+      <label>Expression class</label><select id="tfClassFilter"><option value="">All expression classes</option></select>
+      <label>Representative tissue</label><select id="tfTissueFilter"><option value="">All tissues</option></select>
+      <label class="checkbox-label"><input id="tfMarkerOnly" type="checkbox" /> High-confidence TF markers only</label>
+      <button id="tfSearchBtn" class="primary-btn">Search TFs</button>
+      <button id="downloadTfSearchBtn" class="download-btn">Download filtered TF table</button>
+      <hr />
+      <h2>Regulatory Summaries</h2>
+      <label>Largest families shown</label><input id="tfTopFamilies" type="number" min="5" max="57" value="20" />
+      <label>Families in heatmap</label><input id="tfFamilyHeatmapLimit" type="number" min="5" max="57" value="42" />
+      <label>Family-expression summary</label><select id="tfFamilySummary"><option value="median">Median TPM</option><option value="mean">Mean TPM</option></select>
+      <button id="renderTfPortalBtn" class="primary-btn">Update TF panels</button>
+    </aside>
+    <section>
+      <section class="card"><h2>TF search results</h2><div id="tfSearchSummary" class="note"></div><div class="table-wrap"><table id="tfSearchTable"></table></div></section>
+      <section class="card"><h2>Selected TF</h2><p class="note">Click a row in the TF results table.</p><div id="selectedTfInfo" class="info-grid"></div><details><summary>TF assignment evidence</summary><div id="selectedTfEvidence" class="info-grid"></div></details></section>
+      <section class="card"><h2>Largest transcription-factor families</h2><div id="tfFamilyCountPlot" class="plot-box large"></div><button id="downloadTfFamilyCountsBtn" class="download-btn inline-btn">Download family counts</button></section>
+      <section class="card"><h2>High-confidence TF marker genes by tissue</h2><div id="tfMarkerNotice" class="note"></div><div id="tfMarkerCountPlot" class="plot-box large"></div><button id="downloadTfMarkersBtn" class="download-btn inline-btn">Download TF markers</button></section>
+      <section class="card"><h2>TF-family expression across tissues</h2><div id="tfFamilyHeatmapPlot" class="plot-box extra-large"></div><button id="downloadTfFamilyMatrixBtn" class="download-btn inline-btn">Download family-expression matrix</button></section>
+    </section>
+  </div>
+</section>
+<!-- Gene Ontology Enrichment tab -->
+<section id="go" class="tab-content"><div class="layout"><aside class="sidebar"><h2>Gene Ontology Enrichment</h2>
+<label>Input gene set</label><select id="goSourceMode"><option value="pasted">Paste a custom gene list</option><option value="expression_class">Select an expression class</option><option value="four_tissue_groups">Four tissue groups</option><option value="housekeeping_strict">Strict candidate housekeeping genes</option><option value="housekeeping">All candidate housekeeping genes (strict + relaxed)</option><option value="markers">High-confidence marker genes</option></select>
+<div data-analysis-prefix="go" data-selector-type="pasted"><label>Paste gene IDs</label><textarea id="goGenes" rows="8" placeholder="Ca_00001&#10;Ca_07355"></textarea></div>
+<div data-analysis-prefix="go" data-selector-type="class" class="hidden-control"><label>Expression class</label><select id="goExpressionClass"></select></div>
+<label>Ontology</label><select id="goOntology"><option value="BP">Biological Process (BP)</option><option value="MF">Molecular Function (MF)</option><option value="CC">Cellular Component (CC)</option></select>
+<label>Background gene set</label><select id="goBackground"><option value="annotated">All atlas genes with GO annotation (default)</option><option value="expressed">Expressed atlas genes (median TPM &ge; 1 in &ge; 1 tissue) with GO annotation</option><option value="custom">Custom background list</option></select>
+<div id="goCustomBgBox" class="hidden-control"><label>Paste background gene IDs</label><textarea id="goCustomBg" rows="5" placeholder="Ca_00001&#10;Ca_00002"></textarea><p class="note">Only background genes with GO annotation are used; the foreground is restricted to the background.</p></div>
+<label>Multiple-testing correction</label><select id="goCorrection"><option value="BH">Benjamini&ndash;Hochberg (FDR)</option><option value="Bonferroni">Bonferroni</option><option value="none">None (raw P-value)</option></select>
+<label>Filter significance on</label><select id="goBasis"><option value="adjusted">Adjusted P-value</option><option value="raw">Raw P-value</option></select>
+<label>Minimum foreground genes</label><input id="goMinCount" type="number" value="3" min="1"><label>Significance cutoff</label><input id="goFdr" type="number" value="0.05" step="0.01"><label>Minimum fold enrichment</label><input id="goFold" type="number" value="1" step="0.1"><label for="goTopN">Top significant terms displayed per gene set</label><input id="goTopN" type="number" value="10" min="3" max="30"><button id="runGoBtn" class="primary-btn">Run GO enrichment</button></aside>
+<section class="card"><h2>Gene Ontology enrichment results</h2><details class="method-note"><summary>Statistical method</summary><p>One-sided Fisher&rsquo;s exact test (hypergeometric upper tail) for over-representation of each GO term in the foreground relative to the background, computed in the browser. P-values are adjusted within each gene set and ontology/database using the selected correction (default Benjamini&ndash;Hochberg; the adjusted value is reported as Adjusted_P). Only terms with at least the minimum number of foreground genes are tested; gene sets with fewer than five annotated genes are not tested. Fold enrichment = (foreground genes with the term / annotated foreground) / (background genes with the term / annotated background). Annotations: CDC Frontier v2.0 (gnm2.ann1) GFF3 and InterProScan; GO names from GO.db.</p></details><div id="goSummary" class="note"></div><div id="goPlot" class="enrichment-plot"></div><div class="enrichment-download-row"><button id="downloadGoPlotBtn" class="download-btn enrichment-download-btn">Download GO dot plot as JPEG</button></div><div class="table-wrap enrichment-table-wrap"><table id="goTable"></table></div><div class="enrichment-download-row"><button id="downloadGoCsvBtn" class="download-btn enrichment-download-btn">Download GO table as CSV</button><button id="downloadGoXlsxBtn" class="download-btn enrichment-download-btn">Download GO table as Excel</button></div></section></div></section>
+<!-- Functional Annotation tab -->
+<section id="domains" class="tab-content"><div class="layout"><aside class="sidebar"><h2>Functional Annotation</h2>
+<label>Input gene set</label><select id="domainSourceMode"><option value="pasted">Paste a custom gene list</option><option value="expression_class">Select an expression class</option><option value="four_tissue_groups">Four tissue groups</option><option value="housekeeping_strict">Strict candidate housekeeping genes</option><option value="housekeeping">All candidate housekeeping genes (strict + relaxed)</option><option value="markers">High-confidence marker genes</option></select>
+<div data-analysis-prefix="domain" data-selector-type="pasted"><label>Paste gene IDs</label><textarea id="domainGenes" rows="8" placeholder="Ca_00001&#10;Ca_07355"></textarea></div>
+<div data-analysis-prefix="domain" data-selector-type="class" class="hidden-control"><label>Expression class</label><select id="domainExpressionClass"></select></div>
+<label>Annotation database</label><select id="domainDatabase"><option value="InterPro">InterPro</option><option value="Pfam">Pfam</option></select><label>Background gene set</label><select id="domainBackground"><option value="annotated">All atlas genes with InterPro/Pfam annotation (default)</option><option value="expressed">Expressed atlas genes (median TPM &ge; 1 in &ge; 1 tissue) with InterPro/Pfam annotation</option><option value="custom">Custom background list</option></select>
+<div id="domainCustomBgBox" class="hidden-control"><label>Paste background gene IDs</label><textarea id="domainCustomBg" rows="5" placeholder="Ca_00001&#10;Ca_00002"></textarea><p class="note">Only background genes with InterPro/Pfam annotation are used; the foreground is restricted to the background.</p></div>
+<label>Multiple-testing correction</label><select id="domainCorrection"><option value="BH">Benjamini&ndash;Hochberg (FDR)</option><option value="Bonferroni">Bonferroni</option><option value="none">None (raw P-value)</option></select>
+<label>Filter significance on</label><select id="domainBasis"><option value="adjusted">Adjusted P-value</option><option value="raw">Raw P-value</option></select>
+<label>Minimum foreground genes</label><input id="domainMinCount" type="number" value="3" min="1"><label>Significance cutoff</label><input id="domainFdr" type="number" value="0.05" step="0.01"><label>Minimum fold enrichment</label><input id="domainFold" type="number" value="1" step="0.1"><label for="domainTopN">Top significant domains displayed per gene set</label><input id="domainTopN" type="number" value="10" min="3" max="30"><button id="runDomainBtn" class="primary-btn">Run functional annotation</button></aside>
+<section class="card"><h2>Functional annotation results</h2><details class="method-note"><summary>Statistical method</summary><p>One-sided Fisher&rsquo;s exact test (hypergeometric upper tail) for over-representation of each InterPro entry or Pfam family in the foreground relative to the background, computed in the browser. P-values are adjusted within each gene set and ontology/database using the selected correction (default Benjamini&ndash;Hochberg; the adjusted value is reported as Adjusted_P). Only terms with at least the minimum number of foreground genes are tested; gene sets with fewer than five annotated genes are not tested. Fold enrichment = (foreground genes with the term / annotated foreground) / (background genes with the term / annotated background). Annotations: CDC Frontier v2.0 (gnm2.ann1) GFF3 and InterProScan; GO names from GO.db.</p></details><div id="domainSummary" class="note"></div><div id="domainPlot" class="enrichment-plot"></div><div class="enrichment-download-row"><button id="downloadDomainPlotBtn" class="download-btn enrichment-download-btn">Download functional-annotation dot plot as JPEG</button></div><div class="table-wrap enrichment-table-wrap"><table id="domainTable"></table></div><div class="enrichment-download-row"><button id="downloadDomainCsvBtn" class="download-btn enrichment-download-btn">Download annotation table as CSV</button><button id="downloadDomainXlsxBtn" class="download-btn enrichment-download-btn">Download annotation table as Excel</button></div></section></div></section>
+<!-- Chromosome Mapper tab -->
+    <section id="mapper" class="tab-content">
+      <div class="layout">
+        <aside class="sidebar mapper-sidebar">
+          <details class="method-note" open><summary>What is the chromosome mapper for?</summary><p>The mapper draws publication-ready physical maps of features you supply, such as GWAS SNPs, QTL intervals, markers or candidate genes, on chickpea chromosomes scaled to the selected assembly. It does not query expression; it complements the GWAS module (which finds genes near SNPs) by showing where these features lie. Typical use: compare previously reported loci (left side) with newly identified SNPs or candidate genes (right side). Input: one feature per line as <code>Name, start_bp, end_bp</code>; use the same start and end for single SNPs. Output: one SVG/JPG map per chromosome plus a combined marker table. Tip: use &ldquo;Send to chromosome mapper&rdquo; in the GWAS module to fill the boxes automatically.</p></details>
+          <h2>Reference version</h2>
+
+          <label>Chickpea genome version (CDC Frontier v2.0 matches all other modules)</label>
+          <select id="chrVersion"></select>
+
+          <div id="chrSelectBox"></div>
+
+          <label>Map title</label>
+          <input id="chrMapTitle" value="Chickpea chromosome map" />
+
+          <hr />
+
+          <h2>Marker input by chromosome</h2>
+          <p class="note">Select chromosomes above. Marker input boxes appear only for selected chromosomes.</p>
+          <p class="note">Format: Marker_name, start_bp, end_bp. Use one marker per line or separate markers using semicolons.</p>
+
+          <div id="chrMarkerInputs"></div>
+
+          <hr />
+
+          <h2>Style options</h2>
+
+          <label>Chromosome fill color</label>
+          <select id="chrFillChoice">
+            <option value="#f7f7f7">Light gray</option>
+            <option value="#ffffff">White</option>
+            <option value="#e5f5e0">Light green</option>
+            <option value="#deebf7">Light blue</option>
+            <option value="#ffffcc">Light yellow</option>
+            <option value="#fee6ce">Light orange</option>
+            <option value="#efedf5">Light purple</option>
+          </select>
+
+          <label>Chromosome border color</label>
+          <select id="chrBorderChoice">
+            <option value="#000000">Black</option>
+            <option value="#666666">Gray</option>
+            <option value="#d73027">Red</option>
+            <option value="#4575b4">Blue</option>
+            <option value="#1a9850">Green</option>
+            <option value="#762a83">Purple</option>
+            <option value="#f46d43">Orange</option>
+          </select>
+
+          <label>Chromosome width</label>
+          <input id="chrWidth" type="range" min="0.05" max="0.45" value="0.22" step="0.01" />
+
+          <label>Marker connector line stroke</label>
+          <input id="markerStroke" type="range" min="0.1" max="3" value="0.8" step="0.1" />
+
+          <label>Marker label size</label>
+          <input id="markerLabelSize" type="range" min="8" max="24" value="13" step="1" />
+
+          <label>Minimum visible band height Mb</label>
+          <input id="markerBandHeight" type="range" min="0.02" max="2" value="0.15" step="0.01" />
+
+          <label>Label spread Mb</label>
+          <input id="markerLabelSpread" type="range" min="0.2" max="6" value="1.2" step="0.1" />
+
+          <label>Label distance from chromosome</label>
+          <input id="markerLabelOffset" type="range" min="0.45" max="1.4" value="0.62" step="0.05" />
+
+          <h2>Download dimensions</h2>
+
+          <label>Download width px</label>
+          <input id="chrDownloadWidth" type="range" min="500" max="1800" value="900" step="50" />
+
+          <label>Download height px</label>
+          <input id="chrDownloadHeight" type="range" min="700" max="2200" value="1200" step="50" />
+
+          <label class="checkbox-label">
+            <input id="showChrScale" type="checkbox" checked />
+            Show vertical Mb scale
+          </label>
+
+          <label class="checkbox-label">
+            <input id="showChrNames" type="checkbox" checked />
+            Show chromosome name in title
+          </label>
+
+          <button id="generateChrMapBtn" class="primary-btn">Generate chromosome map</button>
+        </aside>
+
+        <section class="card">
+          <h2>Editable chickpea chromosome maps</h2>
+          <p class="note">Each selected chromosome is displayed as a separate vertical map with band-style marker positions and SVG download.</p>
+          <div id="chrMapOutput"></div>
+
+          <hr />
+
+          <h2>Combined marker table</h2>
+          <div class="table-wrap">
+            <table id="chrMarkerTable"></table>
+          </div>
+        </section>
+      </div>
+    </section>
+<!-- Downloads tab -->
+<section id="downloads" class="tab-content"><section class="card"><h2>Atlas Downloads</h2><p class="note">Click a dataset card to download the file.</p><div class="download-card-grid">
+<a class="download-card" href="data/TPM_median_RK.csv" download><strong>Median TPM expression matrix</strong><span>Gene-level median TPM across biological replicates, 32 tissues (used by all modules)</span><b>Download CSV</b></a>
+<a class="download-card" href="data/TPM_mean_RK.csv" download><strong>Mean TPM expression matrix</strong><span>Gene-level mean TPM across biological replicates, 32 tissues</span><b>Download CSV</b></a>
+<a class="download-card" href="data/website_gene_master.csv" download><strong>Master gene annotation</strong><span>Expression classes, Tau, genomic annotation, domains, and TF families</span><b>Download CSV</b></a>
+<a class="download-card" href="data/high_confidence_tissue_marker_genes.csv" download><strong>High-confidence marker genes</strong><span>Tissue-marker gene assignments</span><b>Download CSV</b></a>
+<a class="download-card" href="data/candidate_housekeeping_genes.csv" download><strong>Candidate housekeeping genes</strong><span>857 candidate housekeeping genes: 64 strict and 793 relaxed (see the Housekeeping_Set column)</span><b>Download CSV</b></a>
+<a class="download-card" href="data/gene_annotation.csv" download><strong>Gene coordinates</strong><span>CDC Frontier v2.0 gene positions, strand, length and description (used by the GWAS module)</span><b>Download CSV</b></a>
+<a class="download-card" href="data/GO_gene_mapping_with_terms.csv" download><strong>GO mapping with terms</strong><span>Gene-to-GO mappings, names, and ontology categories</span><b>Download CSV</b></a>
+<a class="download-card" href="data/combined_gene_domain_mapping.csv" download><strong>Gene-domain mapping</strong><span>InterPro and Pfam assignments</span><b>Download CSV</b></a>
+<a class="download-card" href="data/interpro_pfam_domain_reference.csv" download><strong>Domain reference</strong><span>InterPro and Pfam names and descriptions</span><b>Download CSV</b></a>
+<a class="download-card" href="data/chickpea_chromosome_lengths.csv" download><strong>Chromosome lengths</strong><span>Reference chromosome sizes used by the mapper</span><b>Download CSV</b></a>
+</div></section></section>
+<!-- About tab -->
+    <section id="about" class="tab-content">
+      <section class="card about-card">
+        <div class="about-header">
+          <img src="assets/atlas_logo.png" alt="Logo" class="about-logo" />
+          <h2>CicerExpress</h2>
+          <h3>Interactive chickpea expression atlas</h3>
+          <h3>Tennessee State University</h3>
+          <p>Version 1.0</p>
+        </div>
+
+        <hr />
+
+        <h2>About CicerExpress</h2>
+        <p>
+          CicerExpress is an interactive expression atlas and web resource developed to visualize gene expression patterns across 32 chickpea tissues and developmental stages. The resource allows users to search individual genes, view tissue-specific expression using an eFP-style atlas, generate expression bar plots, create heatmaps for selected genes, summarize mean and median expression, identify candidate genes near GWAS-associated SNPs, perform Gene Ontology enrichment, examine functional and protein-domain enrichment, and create editable chickpea chromosome maps.
+        </p>
+        <p>
+          This resource is designed to support candidate gene prioritization, transcriptomic interpretation, seed trait-related functional genomics, GWAS visualization, and molecular breeding research in chickpea.
+        </p>
+
+        <h2>Development Team</h2>
+
+        <div class="person-row">
+          <div class="person-text">
+            <strong>Shubh Pravat Singh Yadav</strong><br />
+            College of Agriculture, Tennessee State University, Nashville, TN, USA<br />
+            Email: <a href="mailto:sushantpy8500@gmail.com">sushantpy8500@gmail.com</a><br />
+            ORCID: <a href="https://orcid.org/0000-0003-3987-5616" target="_blank">0000-0003-3987-5616</a>
+          </div>
+          <img src="assets/team/Shubh.jpg" alt="Shubh Pravat Singh Yadav" class="person-photo" />
+        </div>
+
+        <div class="person-row">
+          <div class="person-text">
+            <strong>Kuber Shivashakarappa</strong><br />
+            College of Agriculture, Tennessee State University, Nashville, TN, USA<br />
+            Email: <a href="mailto:kshivash@my.tnstate.edu">kshivash@my.tnstate.edu</a>
+          </div>
+          <img src="assets/team/Kuber.png" alt="Kuber Shivashakarappa" class="person-photo" />
+        </div>
+
+        <h2>Faculty Advisors</h2>
+
+        <div class="person-row">
+          <div class="person-text">
+            <strong>Dr. Lyle T. Wallace</strong><br />
+            College of Agriculture, Tennessee State University, Nashville, TN, USA<br />
+            Email: <a href="mailto:lwalla10@tnstate.edu">lwalla10@tnstate.edu</a><br />
+            ORCID: <a href="https://orcid.org/0000-0002-6985-5854" target="_blank">0000-0002-6985-5854</a>
+          </div>
+          <img src="assets/team/Dr. Wallace.jpg" alt="Dr. Lyle T. Wallace" class="person-photo" />
+        </div>
+
+        <div class="person-row">
+          <div class="person-text">
+            <strong>Dr. Ali Taheri</strong><br />
+            College of Agriculture, Tennessee State University, Nashville, TN, USA<br />
+            Email: <a href="mailto:ali.taheri@tnstate.edu">ali.taheri@tnstate.edu</a><br />
+            ORCID: <a href="https://orcid.org/0000-0002-4019-7982" target="_blank">0000-0002-4019-7982</a>
+          </div>
+          <img src="assets/team/Dr. Taheri.jpg" alt="Dr. Ali Taheri" class="person-photo" />
+        </div>
+
+        <h2>Credit and Data Source</h2>
+        <p>
+          The RNA-seq data used in this resource were obtained from the publicly available chickpea transcriptome dataset deposited under NCBI BioProject PRJNA622231
+          (<a href="https://www.ncbi.nlm.nih.gov/bioproject/PRJNA622231" target="_blank">https://www.ncbi.nlm.nih.gov/bioproject/PRJNA622231</a>). This dataset includes transcriptomic profiles from 32 tissues and developmental stages of chickpea cultivar ICC4958 and served as the source of the raw sequencing data used for the analyses presented in this atlas.
+        </p>
+        <p>
+          <strong>Reference:</strong><br />
+          Jain M, Bansal J, Rajkumar MS, Garg R. An integrated transcriptome mapping the regulatory network of coding and long non-coding RNAs provides a genomics resource in chickpea. <em>Communications Biology</em>. 2022;5:1106. PMID: 36261617.
+        </p>
+
+        <h2>Transcriptomic Analysis</h2><div class="flowchart-wrap"><img src="assets/team/Flowchart.jpeg" alt="Transcriptomic analysis workflow" class="flowchart-image" /></div>
+        <p>
+          Publicly available RNA-seq data from BioProject PRJNA622231 (94 libraries, 32 tissues and developmental stages of cultivar ICC4958) were quantified against the CDC Frontier v2.0 reference annotation. The original study generated and released the RNA-seq data; read processing, expression quantification, expression classification, marker and housekeeping gene identification, transcription-factor annotation, data integration and web-resource development were performed for CicerExpress.
+        </p>
+        <p>
+          Raw sequencing reads were downloaded from the NCBI Sequence Read Archive using the SRA Toolkit and converted into paired-end FASTQ files. Transcript-level abundance was estimated using Salmon v1.10.2. A Salmon index was generated from the CDC Frontier reference transcriptome file. Salmon quantification files were imported into R using tximport, transcript-level estimates were summarized to gene-level TPM, and tissue-level median TPM values were calculated across biological replicates (mean TPM is also provided in Downloads). All gene identifiers and coordinates follow the CDC Frontier v2.0 reference genome and annotation (cicar.CDCFrontier.gnm2.ann1.9M1L) from the Legume Information System.
+        </p>
+
+        <h2>Website Development</h2>
+        <p>
+          The atlas website was developed as a static web application using HTML, CSS, JavaScript, CSV data, and a custom SVG-based chickpea tissue diagram. Tissue-specific SVG elements are dynamically colored based on selected gene expression values.
+        </p>
+        <p>
+          The website also includes modules for bar plots, heatmaps, mean and median expression summaries, downloadable figures, single and batch GWAS candidate-gene searches using chromosome, SNP position and upstream/downstream genomic windows, GO and InterPro/Pfam enrichment (one-sided Fisher&rsquo;s exact test with Benjamini&ndash;Hochberg, Bonferroni or no correction, and selectable background gene sets), predefined gene-set selection from expression classes, tissue groups, individual tissues, marker genes, and housekeeping candidates, and an editable chickpea chromosome mapper based on reference chromosome lengths.
+        </p>
+
+        <h2>Cite This Atlas</h2>
+        <div class="citation-box">
+            <p>
+                Yadav, S. P. S., Shivashakarappa, K., Taheri, A., &amp; Wallace, L. T. (2026). <em>CicerExpress: an interactive expression atlas for tissue-specific gene discovery, candidate-gene prioritization and functional enrichment in chickpea.</em> Manuscript submitted. https://legumehub.github.io/Chickpea-Genomics-Atlas/
+            </p>
+        </div>
+
+        <footer>
+          &copy; CicerExpress, Version 1.0<br />
+          Tennessee State University<br />
+          RK
+        </footer>
+      </section>
+    </section></main><script src="app.js"></script></body></html>
