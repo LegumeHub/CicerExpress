@@ -1462,7 +1462,9 @@ async function runGwasSearch() {
 
   let snps = [], failed = [];
   if (mode === "batch") {
-    ({ snps, failed } = parseBatchSnps(document.getElementById("gwasBatchInput").value, defUp, defDown));
+    const batchText = document.getElementById("gwasBatchInput").value.trim();
+    if (!batchText) return alert("Please paste SNPs (one per line: SNP_ID, Chr, Position) or upload a file.");
+    ({ snps, failed } = parseBatchSnps(batchText, defUp, defDown));
   } else {
     const chr = normalizeChr(document.getElementById("gwasChr").value);
     const pos = Number(document.getElementById("snpPos").value);
