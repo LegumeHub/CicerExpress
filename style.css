@@ -18,12 +18,12 @@ body {
 }
 
 .logo {
-  height: 84px;
+  height: 96px;
   width: auto;
   max-width: 100%;
   background: white;
   border-radius: 12px;
-  padding: 6px 12px;
+  padding: 6px 14px;
 }
 
 .visually-hidden {
@@ -263,17 +263,19 @@ tr:nth-child(even) {
 
 .about-header {
   text-align: center;
-  padding: 18px;
+  padding: 8px 18px 4px;
 }
 
 .about-logo {
+  display: block;
   width: 420px;
   max-width: 100%;
+  margin: 0 auto 4px;
 }
 
 .about-header h2 {
   font-size: 32px;
-  margin-bottom: 4px;
+  margin: 6px 0 4px;
 }
 
 .about-header h3 {
