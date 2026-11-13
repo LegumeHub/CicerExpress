@@ -1,6 +1,6 @@
 # CicerExpress v1.0
 
-**CicerExpress: an interactive expression atlas for tissue-specific gene discovery, candidate-gene prioritization and functional enrichment in chickpea**
+**CicerExpress: An interactive expression atlas for tissue-specific gene discovery, candidate-gene prioritization and functional enrichment in chickpea**
 
 ## Overview
 
